@@ -111,11 +111,11 @@ $(document).ready(function(){
 });
 
 function getBookmarks(){
-  chrome.bookmarks.getTree(function(r) {
-    var arrayLength = r.length;
+  chrome.bookmarks.getTree(function(bookmarkCollection) {
+    var arrayLength = bookmarkCollection.length;
     // console.log(arrayLength);
     for (var i=0; i < arrayLength; i++) {
-      treeWalk(r[i]);
+      treeWalk(bookmarkCollection[i]);
     };
   });
 }
