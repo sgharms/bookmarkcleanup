@@ -18,7 +18,11 @@ Controller.prototype = {
 // Get all the bookmarks
 $(document).ready(function(){
 
-    getBookmarks();
+  chrome.bookmarks.getTree(function(bookmarkCollection) {
+    bookmarkCollection.forEach(function(bookmarkObject) {
+      treeWalk(bookmarkObject);
+    });
+  });
 
     $( "#threehun" ).click(function() {
         var val = $("#threehun a").text();
@@ -109,14 +113,6 @@ $(document).ready(function(){
 
 
 });
-
-function getBookmarks(){
-  chrome.bookmarks.getTree(function(bookmarkCollection) {
-    bookmarkCollection.forEach(function(bookmarkObject) {
-      treeWalk(bookmarkCollection[i]);
-    });
-  });
-}
 
 
 function treeWalk(obj) {
