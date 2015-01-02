@@ -112,10 +112,9 @@ $(document).ready(function(){
 
 function getBookmarks(){
   chrome.bookmarks.getTree(function(bookmarkCollection) {
-    var arrayLength = bookmarkCollection.length;
-    for (var i=0; i < arrayLength; i++) {
+    bookmarkCollection.forEach(function(bookmarkObject) {
       treeWalk(bookmarkCollection[i]);
-    };
+    });
   });
 }
 
