@@ -113,7 +113,6 @@ $(document).ready(function(){
 function getBookmarks(){
   chrome.bookmarks.getTree(function(bookmarkCollection) {
     var arrayLength = bookmarkCollection.length;
-    // console.log(arrayLength);
     for (var i=0; i < arrayLength; i++) {
       treeWalk(bookmarkCollection[i]);
     };
