@@ -10,9 +10,15 @@ View.prototype = {
 
 function Controller(view) {
   this.view = view;
+
+  this.bookmarks = [];
 }
 
 Controller.prototype = {
+  addBookmarks: function(newBookmarks) {
+    this.bookmarks.push(newBookmarks);
+    this.view.draw(this.bookmarks);
+  }
 }
 
 // Get all the bookmarks
