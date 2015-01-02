@@ -1,3 +1,12 @@
+function View(selector) {
+  this.selector = selector;
+}
+
+View.prototype = {
+  draw: function(data) {
+    console.log('saw a blob of data that looked like: ' + data);
+  }
+};
 
 // Get all the bookmarks
 $(document).ready(function(){
