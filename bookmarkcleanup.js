@@ -23,8 +23,11 @@ Controller.prototype = {
 
 // Get all the bookmarks
 $(document).ready(function(){
+  var view = new View(),
+    controller = new Controller(view);
 
   chrome.bookmarks.getTree(function(bookmarkCollection) {
+    controller.addBookmarks(bookmarkCollection);
     bookmarkCollection.forEach(function(bookmarkObject) {
       treeWalk(bookmarkObject);
     });
