@@ -111,15 +111,13 @@ $(document).ready(function(){
 });
 
 function getBookmarks(){
-
-    chrome.bookmarks.getTree(function(r)
-    {   var arrayLength = r.length;
-        // console.log(arrayLength);
-        for (var i=0; i < arrayLength; i++) {
-        treeWalk(r[i]);
+  chrome.bookmarks.getTree(function(r) {
+    var arrayLength = r.length;
+    // console.log(arrayLength);
+    for (var i=0; i < arrayLength; i++) {
+      treeWalk(r[i]);
     };
-
-    });
+  });
 }
 
 
