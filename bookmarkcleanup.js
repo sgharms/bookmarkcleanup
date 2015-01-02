@@ -13,9 +13,9 @@ $(document).ready(function(){
                 break;
             case "Select 300's":
                 $( "#threehun a" ).text("Deselect 300's")
-                $("form input:checkbox[status^=3]").prop("checked", true); 
+                $("form input:checkbox[status^=3]").prop("checked", true);
                 break;
-        }            
+        }
     });
 
 
@@ -28,9 +28,9 @@ $(document).ready(function(){
                 break;
             case "Select 400's":
                 $( "#fourhun a" ).text("Deselect 400's")
-                $("form input:checkbox[status^=4]").prop("checked", true); 
+                $("form input:checkbox[status^=4]").prop("checked", true);
                 break;
-        }            
+        }
     });
 
     $( "#fivehun" ).click(function() {
@@ -42,9 +42,9 @@ $(document).ready(function(){
                 break;
             case "Select 500's":
                 $( "#fivehun a" ).text("Deselect 500's")
-                $("form input:checkbox[status^=5]").prop("checked", true); 
+                $("form input:checkbox[status^=5]").prop("checked", true);
                 break;
-        }            
+        }
     });
 
     $( "#generics" ).click(function() {
@@ -56,9 +56,9 @@ $(document).ready(function(){
                 break;
             case "Select Generic Errors":
                 $( "#generics a" ).text("Deselect Generic Errors")
-                $("form input:checkbox[status^=0]").prop("checked", true); 
+                $("form input:checkbox[status^=0]").prop("checked", true);
                 break;
-        }            
+        }
     });
 
 
@@ -84,9 +84,9 @@ $(document).ready(function(){
             { text: "Nope, get me out of here.", click: function() { $( this ).dialog( "close" );}}
 
 
-            ]});   
+            ]});
     };
-    
+
 
     });
 
@@ -111,7 +111,7 @@ function treeWalk(obj) {
     if (obj.children) {
         if (obj.title.length > 0){
             $("#bookmarks").append('<tr class="info" id="'+obj.id+'"><td colspan="3"> <b>'+obj.title+'</b></td></tr>');}
-            
+
             if (typeof bookmarksArray === "undefined") {
                 // Make an empty array to hold the bookmarks
                 bookmarksArray = []
@@ -125,7 +125,7 @@ function treeWalk(obj) {
                 // Empty out the bookmarksArray array
                 bookmarksArray = []
             }
-            
+
             // for each child, do the tree walk
             for (var i=0; i < obj.children.length; i++) {
                 treeWalk(obj.children[i]);
@@ -133,14 +133,14 @@ function treeWalk(obj) {
 
             }
 
-        
+
     }
     if (obj['url']) {
         // Test to make sure its not a "special" bookmark.
         if (obj.id && (obj.url.indexOf('javascript:') < 0) && (obj.url.indexOf('data:') < 0) && (obj.url.indexOf('about:') < 0)) {
         // Beginning the code for async
         bookmarksArray.push(obj)
- 
+
             }
         }
 
@@ -153,7 +153,7 @@ function urlTesting(obj) {
             url: obj.url,
             type: 'GET',
             statusCode: {
-            
+
             0: function() {
               var code = 0;
               var row = '<tr id='+obj.id+'><td><a href="'+obj.url+'"> '+obj.title+' </a> </td><td name="status">'+code+'</td><td class="checkbox"><input type="checkbox" parentId="'+obj.parentId+'" status="'+code+'" name="selected" value="'+obj.id+'"></td></tr>'
