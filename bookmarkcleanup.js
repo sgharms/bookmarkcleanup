@@ -8,6 +8,13 @@ View.prototype = {
   }
 };
 
+function Controller(view) {
+  this.view = view;
+}
+
+Controller.prototype = {
+}
+
 // Get all the bookmarks
 $(document).ready(function(){
 
