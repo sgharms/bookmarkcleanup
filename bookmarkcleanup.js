@@ -154,18 +154,20 @@ Container.prototype = {
 };
 
 function View(selector) {
-  this.$selector = $(selector);
+  this.selectorNode = document.getElementById(selector);
 
   this._initControls();
 };
 
 View.prototype = {
   draw: function(data) {
-    this.$selector.empty();
+    this.selectorNode.innerHTML = '';
     data.bookmarks.containers().forEach(function(container) {
-      this.$selector.append(container.toHTML());
+      this.selectorNode.insertAdjacentHTML('beforeend', container.toHTML());
       container.bookmarksByAscendingDate().forEach(function(bookmark) {
-        bookmark.appendToParentContainer();
+        document
+          .querySelector("table tbody")
+          .insertAdjacentHTML('beforeend', bookmark.toHTML());
       }.bind(this));
     }.bind(this));
   },
@@ -266,7 +268,7 @@ Controller.prototype = {
 };
 
 $(document).ready(function(){
-  var controller = new Controller(new View("#bookmarks"));
+  var controller = new Controller(new View("bookmarks"));
 
   chrome.bookmarks.getTree(function(bookmarkCollection) {
     controller.addBookmarks(bookmarkCollection);
