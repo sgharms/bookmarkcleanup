@@ -23,7 +23,7 @@ Controller.prototype = {
       this.treeWalk(bookmarkObject);
     }.bind(this));
     this.bookmarks.push(newBookmarks);
-    this.view.draw(this.bookmarks);
+    this.view.draw(this);
   },
 
   treeWalk: function(obj) {
