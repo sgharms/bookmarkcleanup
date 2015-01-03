@@ -4,7 +4,9 @@ function View(selector) {
 
 View.prototype = {
   draw: function(data) {
-    console.log('saw a blob of data that looked like: ' + data);
+    data.headingNodes.forEach(function(obj) {
+      $("#bookmarks").append('<tr class="info" id="'+obj.id+'"><td colspan="3"> <b>'+obj.title+'</b></td></tr>');
+    });
   }
 };
 
@@ -12,6 +14,7 @@ function Controller(view) {
   this.view = view;
 
   this.bookmarks = [];
+  this.headingNodes = [];
 }
 
 Controller.prototype = {
@@ -26,7 +29,8 @@ Controller.prototype = {
   treeWalk: function(obj) {
     if (obj.children) {
       if (obj.title.length > 0){
-        $("#bookmarks").append('<tr class="info" id="'+obj.id+'"><td colspan="3"> <b>'+obj.title+'</b></td></tr>');}
+        this.headingNodes.push(obj);
+      }
 
         if (typeof this.bookmarksArray === "undefined") {
           this.bookmarksArray = []
