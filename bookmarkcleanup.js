@@ -174,16 +174,19 @@ View.prototype = {
 
     links.forEach(function(clickBehaviorSpecifier) {
       $(clickBehaviorSpecifier.selector).on("click", function(e) {
+        var $target = $(e.target);
         if (
-          typeof($(e.target)).data('toggled') == "undefined" ||
-            $(e.target).data('toggled') === false
+          typeof($target).data('toggled') == "undefined" ||
+            $target.data('toggled') === false
         ) {
-          $(e.target).data('toggled', true);
-          $(e.target).text("Deselect " + clickBehaviorSpecifier.text);
+          $target
+            .data('toggled', true)
+            .text("Deselect " + clickBehaviorSpecifier.text);
           $(clickBehaviorSpecifier.inputsSelector).prop("checked", true);
         } else {
-          $(e.target).text("Select " + clickBehaviorSpecifier.text);
-          $(e.target).data('toggled', false);
+          $target
+            .data('toggled', false)
+            .text("Select " + clickBehaviorSpecifier.text);
           $(clickBehaviorSpecifier.inputsSelector).prop("checked", false);
         }
       });
