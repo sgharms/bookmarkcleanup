@@ -16,8 +16,9 @@ function Bookmark(data) {
 
 Bookmark.prototype = {
   appendToParentContainer: function() {
-    $('#'+this.parentId)
-      .after(this.toHTML());
+    document
+      .getElementById(this.parentId)
+      .insertAdjacentHTML('afterend', this.toHTML());
   },
 
   _resolveValidityState: function() {
