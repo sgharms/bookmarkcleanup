@@ -1,12 +1,215 @@
+function Bookmark(data) {
+  this.raw = data;
+  $.extend(this, data);
+}
+
+Bookmark.prototype = {
+  isValid: function() {
+    return true;
+  }
+}
+
+function Container(data) {
+  $.extend(this, data);
+  this.raw = data;
+  this.children = this._calculateChildren();
+}
+
+Container.prototype = {
+  bookmarks: function() {
+    var accumulator;
+    this._bookmarks(accumulator = []);
+    return this._sanitizeBookmarks(accumulator);
+  },
+
+  containers: function() {
+    var accumulator;
+    this._containers(accumulator = []);
+    return this._sanitizeContainers(accumulator);
+  },
+
+  _sanitizeBookmarks: function(bookmarks) {
+    function isNotScriptlet(url) {
+      return !url.match(/^javascript/);
+    }
+
+    return bookmarks.filter(function(bookmark) {
+      return isNotScriptlet(bookmark.url);
+    });
+  },
+
+  _sanitizeContainers: function(containers) {
+    return containers.filter(function(container) {
+      return (container.title != "");
+    });
+  },
+
+  _containers: function(_c) {
+    this.children.forEach(function(node) {
+      if (node instanceof Container) {
+        _c.push(node);
+        node._containers(_c)
+      }
+    }.bind(this));
+  },
+
+  _bookmarks: function(_c) {
+    this.children.forEach(function(node) {
+      if ((node.title != "") && typeof(node.children) == "undefined") {
+        _c.push(node);
+      }
+    }.bind(this));
+  },
+
+  _calculateChildren: function() {
+    if (this.raw instanceof(Array)) {
+      return this.raw.map(function(childNode) {
+        return new Container(childNode);
+      }.bind(this));
+    } else if (this.raw.children.length > 0) {
+      return this.raw.children.map(function(child) {
+        if (typeof(child.url) === "undefined") {
+          return new Container(child);
+        } else {
+          return new Bookmark(child);
+        }
+      }.bind(this));
+    }
+    throw {
+      message: "Expected Container to be initialized with children that were enumerable; they were not.",
+      name: "UnclassifiedChildrenCollectionType"
+    }
+  }
+}
 function View(selector) {
-  this.selector = selector;
+  this._initControls();
 }
 
 View.prototype = {
   draw: function(data) {
-    data.headingNodes.forEach(function(obj) {
-      $("#bookmarks").append('<tr class="info" id="'+obj.id+'"><td colspan="3"> <b>'+obj.title+'</b></td></tr>');
+    data.bookmarks.containers().forEach(function(container) {
+      $("#bookmarks").append([
+        '<tr class="info" id="',
+        container.id,
+        '"><td colspan="3"> <b>',
+        container.title,
+        '</b></td></tr>'
+      ].join(''));
+      container.bookmarks().forEach(function(bm) {
+        this._urlTesting(bm);
+      }.bind(this));
+    }.bind(this));
+  },
+
+  _initControls: function() {
+    this._initSelectionControls();
+    this._initCleaningControl();
+  },
+
+  _initSelectionControls: function() {
+    var links = [
+      { selector: "#threehun", text: "300s", inputsSelector: "form input:checkbox[status^=3]" },
+      { selector: "#fourhun", text: "400s", inputsSelector: "form input:checkbox[status^=4]"  },
+      { selector: "#fivehun", text: "500s", inputsSelector: "form input:checkbox[status^=5]"  },
+      { selector: "#generics", text: "Generic Errors", inputsSelector: "form input:checkbox[status^=0]"  }
+    ];
+
+    links.forEach(function(clickBehaviorSpecifier) {
+      $(clickBehaviorSpecifier.selector).on("click", function(e) {
+        if (
+          typeof($(e.target)).data('toggled') == "undefined" ||
+            $(e.target).data('toggled') === false
+        ) {
+          $(e.target).data('toggled', true);
+          $(e.target).text("Deselect " + clickBehaviorSpecifier.text);
+          $(clickBehaviorSpecifier.inputsSelector).prop("checked", true);
+        } else {
+          $(e.target).text("Select " + clickBehaviorSpecifier.text);
+          $(e.target).data('toggled', false);
+          $(clickBehaviorSpecifier.inputsSelector).prop("checked", false);
+        }
+      });
     });
+  },
+
+  _initCleaningControl: function() {
+    $( "#clean").click(function() {
+      var checkedLength = $( "input:checked" ).length
+      if (checkedLength < 1) {
+        $( "#delwarning" ).text("You haven't selected any bookmarks to delete.")
+        $( "#dialog" ).dialog({
+          buttons: [{
+            text: "Close",
+            click: function() {
+              $( this ).dialog( "close" );
+            }
+          }
+          ]
+        });
+      }
+      else {
+        $( "#delwarning" )
+          .text("This will delete " +
+                checkedLength +
+                " bookmarks. Are you sure you want to do this?")
+        $( "#dialog" ).dialog({
+          buttons: [
+            {
+              text: "I'm sure.",
+              click: function() {
+                $( this ).dialog( "close" );
+                for (var i=0; i < checkedLength; i++) {
+                  var badBookmark = $( "input:checked" )[i].value;
+                  //chrome.bookmarks.remove(String(badBookmark))
+                  $('#'+badBookmark).remove();
+                };
+              }
+          },
+          {
+            text: "Nope, get me out of here.",
+            click: function() {
+              $( this ).dialog( "close" );
+            }
+          }]
+        });
+      };
+    });
+  },
+
+  _urlTesting: function(obj) {
+    var obj = obj,
+      view = this;
+
+    $.ajax({
+      url: obj.url,
+      type: 'GET',
+    })
+    .then(function(data, statusText, jqXHR){
+      view._tableRow(obj, jqXHR)
+    })
+    .fail(function(jqXHR, statusText) {
+      view._tableRow(obj, jqXHR)
+    });
+  },
+
+  _tableRow: function(obj, jqXHR) {
+    $('#'+obj.parentId).after([
+      '<tr id=',
+      obj.id,
+      '><td><a href="',
+      obj.url,
+      '"> ',
+      obj.title,
+      ' </a> </td><td name="status">',
+      jqXHR.status,
+      '</td><td class="checkbox"><input type="checkbox" parentId="',
+      obj.parentId,
+      '" status="',
+      jqXHR.status,
+      '" name="selected" value="',
+      obj.id,
+      '"></td></tr>'
+    ].join(''));
   }
 };
 
@@ -14,203 +217,17 @@ function Controller(view) {
   this.view = view;
 
   this.bookmarks = [];
-  this.headingNodes = [];
 }
 
 Controller.prototype = {
   addBookmarks: function(newBookmarks) {
-    newBookmarks.forEach(function(bookmarkObject) {
-      this.treeWalk(bookmarkObject);
-    }.bind(this));
-    this.bookmarks.push(newBookmarks);
+    this.bookmarks = new Container(newBookmarks);
     this.view.draw(this);
-  },
-
-  treeWalk: function(obj) {
-    if (obj.children) {
-      if (obj.title.length > 0){
-        this.headingNodes.push(new Container(obj));
-      }
-
-      for (var i=0; i < this.bookmarks.length; i++) {
-        urlTesting(this.bookmarks[i]);
-      }
-
-      for (var i=0; i < obj.children.length; i++) {
-        this.treeWalk(obj.children[i]);
-      }
-    }
-
-    if (obj['url']) {
-      if (obj.id && (obj.url.indexOf('javascript:') < 0) && (obj.url.indexOf('data:') < 0) && (obj.url.indexOf('about:') < 0)) {
-        this.bookmarks.push(obj)
-
-      }
-    }
-
   }
 }
 
-function Container(data) {
-  this.title = data.title;
-  this.raw = data;
-}
-
-Container.prototype = {
-}
-
-// Get all the bookmarks
 $(document).ready(function(){
-  var view = new View(),
-    controller = new Controller(view);
-
   chrome.bookmarks.getTree(function(bookmarkCollection) {
-    controller.addBookmarks(bookmarkCollection);
+    new Controller(new View()).addBookmarks(bookmarkCollection);
   });
-
-    $( "#threehun" ).click(function() {
-        var val = $("#threehun a").text();
-        switch(val){
-            case "Deselect 300's":
-                $( "#threehun a" ).text("Select 300's")
-                $("form input:checkbox[status^=3]").prop("checked", false);
-                break;
-            case "Select 300's":
-                $( "#threehun a" ).text("Deselect 300's")
-                $("form input:checkbox[status^=3]").prop("checked", true);
-                break;
-        }
-    });
-
-
-    $( "#fourhun" ).click(function() {
-        var val = $("#fourhun a").text();
-        switch(val){
-            case "Deselect 400's":
-                $( "#fourhun a" ).text("Select 400's")
-                $("form input:checkbox[status^=4]").prop("checked", false);
-                break;
-            case "Select 400's":
-                $( "#fourhun a" ).text("Deselect 400's")
-                $("form input:checkbox[status^=4]").prop("checked", true);
-                break;
-        }
-    });
-
-    $( "#fivehun" ).click(function() {
-        var val = $("#fivehun a").text();
-        switch(val){
-            case "Deselect 500's":
-                $( "#fivehun a" ).text("Select 500's")
-                $("form input:checkbox[status^=5]").prop("checked", false);
-                break;
-            case "Select 500's":
-                $( "#fivehun a" ).text("Deselect 500's")
-                $("form input:checkbox[status^=5]").prop("checked", true);
-                break;
-        }
-    });
-
-    $( "#generics" ).click(function() {
-        var val = $("#generics a").text();
-        switch(val){
-            case "Deselect Generic Errors":
-                $( "#generics a" ).text("Select Generic Errors")
-                $("form input:checkbox[status^=0]").prop("checked", false);
-                break;
-            case "Select Generic Errors":
-                $( "#generics a" ).text("Deselect Generic Errors")
-                $("form input:checkbox[status^=0]").prop("checked", true);
-                break;
-        }
-    });
-
-
-    $( "#clean").click(function() {
-    console.log("clean click")
-    var checkedLength = $( "input:checked" ).length
-    if (checkedLength < 1) {
-        $( "#delwarning" ).text("You haven't selected any bookmarks to delete.")
-        $( "#dialog" ).dialog({ buttons: [ { text: "Close", click: function() { $( this ).dialog( "close" ); } } ] });
-    }
-    else {
-        $( "#delwarning" ).text("This will delete "+checkedLength+" bookmarks. Are you sure you want to do this?")
-        $( "#dialog" ).dialog({ buttons: [
-            { text: "I'm sure.", click: function() {
-                $( this ).dialog( "close" );
-                for (var i=0; i < checkedLength; i++) {
-                    var badBookmark = $( "input:checked" )[i].value;
-                    chrome.bookmarks.remove(String(badBookmark))
-                    $( '#'+badBookmark ).remove();
-                };
-
-            }},
-            { text: "Nope, get me out of here.", click: function() { $( this ).dialog( "close" );}}
-
-
-            ]});
-    };
-
-
-    });
-
-
-
 });
-
-
-
-
-
-function urlTesting(obj) {
-
-        $.ajax({
-            url: obj.url,
-            type: 'GET',
-            statusCode: {
-
-            0: function() {
-              var code = 0;
-              var row = '<tr id='+obj.id+'><td><a href="'+obj.url+'"> '+obj.title+' </a> </td><td name="status">'+code+'</td><td class="checkbox"><input type="checkbox" parentId="'+obj.parentId+'" status="'+code+'" name="selected" value="'+obj.id+'"></td></tr>'
-            $('#'+obj.parentId).after(row);
-            },
-
-            403: function() {
-              var code = 403;
-              var row = '<tr id='+obj.id+'><td><a href="'+obj.url+'"> '+obj.title+' </a> </td><td name="status">'+code+'</td><td class="checkbox"><input type="checkbox" parentId="'+obj.parentId+'" status="'+code+'" name="selected" value="'+obj.id+'"></td></tr>'
-            $('#'+obj.parentId).after(row);
-            },
-
-
-            404: function() {
-              var code = 404;
-              var row = '<tr id='+obj.id+'><td><a href="'+obj.url+'"> '+obj.title+' </a> </td><td name="status">'+code+'</td><td class="checkbox"><input type="checkbox" parentId="'+obj.parentId+'" status="'+code+'" name="selected" value="'+obj.id+'"></td></tr>'
-            $('#'+obj.parentId).after(row);
-            },
-
-            503: function() {
-              var code = 503;
-              var row = '<tr id='+obj.id+'><td><a href="'+obj.url+'"> '+obj.title+' </a> </td><td name="status">'+code+'</td><td class="checkbox"><input type="checkbox" parentId="'+obj.parentId+'" status="'+code+'" name="selected" value="'+obj.id+'"></td></tr>'
-            $('#'+obj.parentId).after(row);
-            },
-
-            408: function() {
-              var code = 408;
-              var row = '<tr id='+obj.id+'><td><a href="'+obj.url+'"> '+obj.title+' </a> </td><td name="status">'+code+'</td><td class="checkbox"><input type="checkbox" parentId="'+obj.parentId+'" status="'+code+'" name="selected" value="'+obj.id+'"></td></tr>'
-            $('#'+obj.parentId).after(row);
-            },
-
-            500: function() {
-              var code = 500;
-              var row = '<tr id='+obj.id+'><td><a href="'+obj.url+'"> '+obj.title+' </a> </td><td name="status">'+code+'</td><td class="checkbox"><input type="checkbox" parentId="'+obj.parentId+'" status="'+code+'" name="selected" value="'+obj.id+'"></td></tr>'
-            $('#'+obj.parentId).after(row);
-            },
-
-          }
-
-        });
-}
-
-
-
-
