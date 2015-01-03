@@ -29,7 +29,7 @@ Controller.prototype = {
   treeWalk: function(obj) {
     if (obj.children) {
       if (obj.title.length > 0){
-        this.headingNodes.push(obj);
+        this.headingNodes.push(new Container(obj));
       }
 
       for (var i=0; i < this.bookmarks.length; i++) {
@@ -49,6 +49,14 @@ Controller.prototype = {
     }
 
   }
+}
+
+function Container(data) {
+  this.title = data.title;
+  this.raw = data;
+}
+
+Container.prototype = {
 }
 
 // Get all the bookmarks
