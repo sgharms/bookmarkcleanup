@@ -15,8 +15,6 @@ function Controller(view) {
 
   this.bookmarks = [];
   this.headingNodes = [];
-
-  this.bookmarksArray = []
 }
 
 Controller.prototype = {
@@ -34,8 +32,8 @@ Controller.prototype = {
         this.headingNodes.push(obj);
       }
 
-      for (var i=0; i < this.bookmarksArray.length; i++) {
-        urlTesting(this.bookmarksArray[i]);
+      for (var i=0; i < this.bookmarks.length; i++) {
+        urlTesting(this.bookmarks[i]);
       }
 
       for (var i=0; i < obj.children.length; i++) {
@@ -45,7 +43,7 @@ Controller.prototype = {
 
     if (obj['url']) {
       if (obj.id && (obj.url.indexOf('javascript:') < 0) && (obj.url.indexOf('data:') < 0) && (obj.url.indexOf('about:') < 0)) {
-        this.bookmarksArray.push(obj)
+        this.bookmarks.push(obj)
 
       }
     }
