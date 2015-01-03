@@ -5,6 +5,11 @@ function Bookmark(data) {
 }
 
 Bookmark.prototype = {
+  appendToParentContainer: function() {
+    $('#'+this.parentId)
+      .after(this.toHTML());
+  },
+
   _resolveValidityState: function() {
     var bookmark = this;
 
@@ -14,17 +19,39 @@ Bookmark.prototype = {
       return;
     }
 
-    $.ajax({
+    this.ajaxCallback = $.ajax({
       url: this.url,
       context: this,
       type: 'GET',
     })
     .then(function(data, statusText, jqXHR){
       this.isValid = true;
+      this.status = jqXHR.status;
     })
     .fail(function(jqXHR, statusText) {
       this.isValid = false;
+      this.status = jqXHR.status;
     })
+  },
+
+  toHTML: function() {
+    return [
+      '<tr id=',
+      this.id,
+      '><td><a href="',
+      this.url,
+      '"> ',
+      this.title,
+      ' </a> </td><td name="status">',
+      this.status,
+      '</td><td class="checkbox"><input type="checkbox" parentId="',
+      this.parentId,
+      '" status="',
+      this.status,
+      '" name="selected" value="',
+      this.id,
+      '"></td></tr>'
+    ].join('');
   }
 }
 
@@ -35,10 +62,24 @@ function Container(data) {
 }
 
 Container.prototype = {
+  toHTML: function() {
+    return [
+      '<tr class="info" id="', this.id, '">',
+        '<td colspan="3"> <b>', this.title, '</b></td>',
+      '</tr>'
+    ].join('');
+  },
+
   bookmarks: function() {
     var accumulator;
     this._bookmarks(accumulator = []);
     return this._sanitizeBookmarks(accumulator);
+  },
+
+  bookmarksByAscendingDate: function() {
+    return this.bookmarks().sort(function(a, b) {
+      return b.dateAdded - a.dateAdded;
+    });
   },
 
   containers: function() {
@@ -63,19 +104,19 @@ Container.prototype = {
     });
   },
 
-  _containers: function(_c) {
+  _containers: function(memo) {
     this.children.forEach(function(node) {
       if (node instanceof Container) {
-        _c.push(node);
-        node._containers(_c)
+        memo.push(node);
+        node._containers(memo)
       }
     }.bind(this));
   },
 
-  _bookmarks: function(_c) {
+  _bookmarks: function(memo) {
     this.children.forEach(function(node) {
       if ((node.title != "") && typeof(node.children) == "undefined") {
-        _c.push(node);
+        memo.push(node);
       }
     }.bind(this));
   },
@@ -99,23 +140,21 @@ Container.prototype = {
       name: "UnclassifiedChildrenCollectionType"
     }
   }
-}
+};
+
 function View(selector) {
+  this.$selector = $(selector);
+
   this._initControls();
-}
+};
 
 View.prototype = {
   draw: function(data) {
+    this.$selector.empty();
     data.bookmarks.containers().forEach(function(container) {
-      $("#bookmarks").append([
-        '<tr class="info" id="',
-        container.id,
-        '"><td colspan="3"> <b>',
-        container.title,
-        '</b></td></tr>'
-      ].join(''));
-      container.bookmarks().forEach(function(bm) {
-        this._urlTesting(bm);
+      this.$selector.append(container.toHTML());
+      container.bookmarksByAscendingDate().forEach(function(bookmark) {
+        bookmark.appendToParentContainer();
       }.bind(this));
     }.bind(this));
   },
@@ -193,42 +232,6 @@ View.prototype = {
         });
       };
     });
-  },
-
-  _urlTesting: function(obj) {
-    var obj = obj,
-      view = this;
-
-    $.ajax({
-      url: obj.url,
-      type: 'GET',
-    })
-    .then(function(data, statusText, jqXHR){
-      view._tableRow(obj, jqXHR)
-    })
-    .fail(function(jqXHR, statusText) {
-      view._tableRow(obj, jqXHR)
-    });
-  },
-
-  _tableRow: function(obj, jqXHR) {
-    $('#'+obj.parentId).after([
-      '<tr id=',
-      obj.id,
-      '><td><a href="',
-      obj.url,
-      '"> ',
-      obj.title,
-      ' </a> </td><td name="status">',
-      jqXHR.status,
-      '</td><td class="checkbox"><input type="checkbox" parentId="',
-      obj.parentId,
-      '" status="',
-      jqXHR.status,
-      '" name="selected" value="',
-      obj.id,
-      '"></td></tr>'
-    ].join(''));
   }
 };
 
@@ -241,12 +244,21 @@ function Controller(view) {
 Controller.prototype = {
   addBookmarks: function(newBookmarks) {
     this.bookmarks = new Container(newBookmarks);
+  },
+
+  draw: function() {
     this.view.draw(this);
   }
-}
+};
 
 $(document).ready(function(){
+  var controller = new Controller(new View("#bookmarks"));
+
   chrome.bookmarks.getTree(function(bookmarkCollection) {
-    new Controller(new View()).addBookmarks(bookmarkCollection);
+    controller.addBookmarks(bookmarkCollection);
   });
+
+   $(document).on("ajaxComplete", function(){
+     controller.draw();
+   });
 });
