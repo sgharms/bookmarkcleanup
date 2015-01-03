@@ -29,30 +29,22 @@ Controller.prototype = {
         $("#bookmarks").append('<tr class="info" id="'+obj.id+'"><td colspan="3"> <b>'+obj.title+'</b></td></tr>');}
 
         if (typeof this.bookmarksArray === "undefined") {
-          // Make an empty array to hold the bookmarks
           this.bookmarksArray = []
         }
         else {
-          //Do some stuff with the current bookmarksArray
-          console.log (this.bookmarksArray)
           for (var i=0; i < this.bookmarksArray.length; i++) {
             urlTesting(this.bookmarksArray[i]);
           }
-          // Empty out the bookmarksArray array
           this.bookmarksArray = []
         }
 
-        // for each child, do the tree walk
         for (var i=0; i < obj.children.length; i++) {
           this.treeWalk(obj.children[i]);
-          // console.log(urls)
-
         }
     }
+
     if (obj['url']) {
-      // Test to make sure its not a "special" bookmark.
       if (obj.id && (obj.url.indexOf('javascript:') < 0) && (obj.url.indexOf('data:') < 0) && (obj.url.indexOf('about:') < 0)) {
-        // Beginning the code for async
         this.bookmarksArray.push(obj)
 
       }
