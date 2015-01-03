@@ -1,11 +1,30 @@
 function Bookmark(data) {
-  this.raw = data;
   $.extend(this, data);
+
+  this._resolveValidityState();
 }
 
 Bookmark.prototype = {
-  isValid: function() {
-    return true;
+  _resolveValidityState: function() {
+    var bookmark = this;
+
+    this.isValid = false;
+
+    if (this.url.match(/^javascript/)) {
+      return;
+    }
+
+    $.ajax({
+      url: this.url,
+      context: this,
+      type: 'GET',
+    })
+    .then(function(data, statusText, jqXHR){
+      this.isValid = true;
+    })
+    .fail(function(jqXHR, statusText) {
+      this.isValid = false;
+    })
   }
 }
 
