@@ -5,6 +5,14 @@ noQuery = {
         recipient[key] = source[key];
       }
     }
+  },
+
+  checkboxes: function() {
+    var inputs = Array.prototype.slice.call(document.querySelectorAll("form input"));
+
+    return  checkboxes = inputs.filter(function(input) {
+        return input.attributes['type'].value === "checkbox";
+      });
   }
 };
 
@@ -30,19 +38,21 @@ Bookmark.prototype = {
       return;
     }
 
-    this.ajaxCallback = $.ajax({
-      url: this.url,
-      context: this,
-      type: 'GET',
-    })
-    .then(function(data, statusText, jqXHR){
-      this.isValid = true;
-      this.status = jqXHR.status;
-    })
-    .fail(function(jqXHR, statusText) {
-      this.isValid = false;
-      this.status = jqXHR.status;
-    })
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function(args) {
+      if (this.status == 200) {
+        bookmark.isValid = true;
+        bookmark.status = this.status;
+        document.dispatchEvent(new Event('ajaxComplete'))
+      } else if (this.status.toString().charAt(0) === "4") {
+        bookmark.isValid = false;
+        bookmark.status = this.status;
+        document.dispatchEvent(new Event('ajaxComplete'))
+      }
+    };
+
+    xhr.open("GET",this.url);
+    xhr.send();
   },
 
   toHTML: function() {
@@ -179,74 +189,65 @@ View.prototype = {
 
   _initSelectionControls: function() {
     var links = [
-      { selector: "#threehun", text: "300s", inputsSelector: "form input:checkbox[status^=3]" },
-      { selector: "#fourhun", text: "400s", inputsSelector: "form input:checkbox[status^=4]"  },
-      { selector: "#fivehun", text: "500s", inputsSelector: "form input:checkbox[status^=5]"  },
-      { selector: "#generics", text: "Generic Errors", inputsSelector: "form input:checkbox[status^=0]"  }
+      { selector: "fourhun", text: "400s", inputsSelector: function() { return noQuery.checkboxes().filter(function(cb){ return cb.attributes['status'].value.match(/^4/) }) } },
+      { selector: "fivehun", text: "500s", inputsSelector: function() { return noQuery.checkboxes().filter(function(cb){ return cb.attributes['status'].value.match(/^5/) }) }},
+      { selector: "generics", text: "Generic Errors", inputsSelector: function() { return noQuery.checkboxes().filter(function(cb){ return cb.attributes['status'].value.match(/^0/) }) }}
     ];
 
+
     links.forEach(function(clickBehaviorSpecifier) {
-      $(clickBehaviorSpecifier.selector).on("click", function(e) {
-        var $target = $(e.target);
-        if (
-          typeof($target).data('toggled') == "undefined" ||
-            $target.data('toggled') === false
-        ) {
-          $target
-            .data('toggled', true)
-            .text("Deselect " + clickBehaviorSpecifier.text);
-          $(clickBehaviorSpecifier.inputsSelector).prop("checked", true);
+      document
+        .getElementById(clickBehaviorSpecifier.selector)
+        .addEventListener('click', function(e) {
+          var targetNode = e.currentTarget,
+            untoggled = !targetNode.getAttribute('data-toggled');
+        if (untoggled) {
+          targetNode.setAttribute('data-toggled', true);
+          targetNode.childNodes[0].innerHTML = "Deselect " + clickBehaviorSpecifier.text;
+          clickBehaviorSpecifier.inputsSelector().forEach(function(cb) {
+            cb.setAttribute('checked', true);
+            cb.checked = true;
+          });
         } else {
-          $target
-            .data('toggled', false)
-            .text("Select " + clickBehaviorSpecifier.text);
-          $(clickBehaviorSpecifier.inputsSelector).prop("checked", false);
+          targetNode.removeAttribute('data-toggled');
+          targetNode.childNodes[0].innerHTML = "Select " + clickBehaviorSpecifier.text;
+          clickBehaviorSpecifier.inputsSelector().forEach(function(cb) {
+            cb.checked = false;
+          });
         }
       });
     });
   },
 
   _initCleaningControl: function() {
-    $( "#clean").click(function() {
-      var checkedLength = $( "input:checked" ).length
+    document.getElementById("clean").addEventListener('click', function() {
+      var result,
+        warningText,
+        checkedBoxes = noQuery.checkboxes().filter(function(cb) {
+          return !!cb.checked;
+        }),
+        checkedLength = checkedBoxes.length;
+
       if (checkedLength < 1) {
-        $( "#delwarning" ).text("You haven't selected any bookmarks to delete.")
-        $( "#dialog" ).dialog({
-          buttons: [{
-            text: "Close",
-            click: function() {
-              $( this ).dialog( "close" );
-            }
-          }
-          ]
-        });
+        alert("You haven't selected any bookmarks to delete.");
+        return;
+      } else {
+        result = confirm(
+          ["This will delete ",
+          checkedLength,
+          " bookmark",
+          (checkedLength > 1 ? "s" : ""),
+          ". Are you sure you want to do this?"].join('')
+        );
+        if (result) {
+          checkedBoxes.forEach(function(cb) {
+            var badBookmarkValue = String(cb.getAttribute("value")),
+              node = document.getElementById(badBookmarkValue);
+            //chrome.bookmarks.remove(badBookmarkValue)
+            node.parentNode.removeChild(node);
+          });
+        }
       }
-      else {
-        $( "#delwarning" )
-          .text("This will delete " +
-                checkedLength +
-                " bookmarks. Are you sure you want to do this?")
-        $( "#dialog" ).dialog({
-          buttons: [
-            {
-              text: "I'm sure.",
-              click: function() {
-                $( this ).dialog( "close" );
-                for (var i=0; i < checkedLength; i++) {
-                  var badBookmark = $( "input:checked" )[i].value;
-                  //chrome.bookmarks.remove(String(badBookmark))
-                  $('#'+badBookmark).remove();
-                };
-              }
-          },
-          {
-            text: "Nope, get me out of here.",
-            click: function() {
-              $( this ).dialog( "close" );
-            }
-          }]
-        });
-      };
     });
   }
 };
@@ -267,14 +268,14 @@ Controller.prototype = {
   }
 };
 
-$(document).ready(function(){
+document.addEventListener('DOMContentLoaded', function(){
   var controller = new Controller(new View("bookmarks"));
 
   chrome.bookmarks.getTree(function(bookmarkCollection) {
     controller.addBookmarks(bookmarkCollection);
   });
 
-   $(document).on("ajaxComplete", function(){
-     controller.draw();
-   });
+  document.addEventListener("ajaxComplete", function() {
+    controller.draw();
+  });
 });
