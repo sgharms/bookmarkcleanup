@@ -1,15 +1,5 @@
-noQuery = {
-  extend: function(recipient, source) {
-    for (var key in source) {
-      if(source.hasOwnProperty(key)){
-        recipient[key] = source[key];
-      }
-    }
-  }
-}
-
 function Bookmark(data) {
-  noQuery.extend(this, data);
+  $.extend(this, data);
 
   this.statusCode = null;
   this._toHtmlDeferred = $.Deferred();
@@ -54,7 +44,7 @@ Bookmark.prototype = {
 };
 
 function Container(data) {
-  noQuery.extend(this, data);
+  $.extend(this, data);
   this.raw = data;
   this.children = this._calculateChildren();
 };
